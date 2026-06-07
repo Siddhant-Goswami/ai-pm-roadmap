@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'applied-ai-roadmap.v1';
-  const RECEIPT_KEY = 'applied-ai-roadmap.receipt.v1';
+  const STORAGE_KEY = 'applied-ai-roadmap.opt-v1';
+  const RECEIPT_KEY = 'applied-ai-roadmap.receipt.opt-v1';
   const config = window.APP_CONFIG;
   const data = window.ROADMAP_DATA;
   const engine = window.RoadmapEngine;
@@ -25,8 +25,8 @@
   state.pos = Number.isInteger(state.pos) ? Math.max(0, Math.min(steps.length - 1, state.pos)) : 0;
   state.maxReached = Number.isInteger(state.maxReached) ? Math.max(state.pos, Math.min(steps.length - 1, state.maxReached)) : state.pos;
   state.submitted = Boolean(state.submitted);
-  state.diagnostic = state.diagnostic || null;
-  state.roadmap = Array.isArray(state.roadmap) ? state.roadmap : null;
+  state.assessment = state.assessment || null;
+  state.learningPriorities = Array.isArray(state.learningPriorities) ? state.learningPriorities : null;
   if (!state.submitted && steps[state.pos].type === 'result') state.pos = steps.length - 2;
 
   const stage = document.querySelector('#stage');
@@ -146,10 +146,26 @@
         <p class="subtitle">${escapeHtml(step.subtitle)}</p>
         <p class="body-copy">${escapeHtml(step.body)}</p>
         <div class="promise-grid">
-          <div class="promise"><b>15 honest answers</b><span>No tool trivia or generic personality quiz.</span></div>
-          <div class="promise"><b>Your current position</b><span>See the specific gap between specs and shipping.</span></div>
-          <div class="promise"><b>A seven-day route</b><span>Built around your workflow and daily tools.</span></div>
+          <div class="promise"><b>8 focused questions</b><span>Only the context needed to review your starting point.</span></div>
+          <div class="promise"><b>OPT context</b><span>Goals, users, processes, systems, and the tasks inside them.</span></div>
+          <div class="promise"><b>Team review</b><span>Your seven-day plan is prepared after a person reviews your answers.</span></div>
         </div>
+      </section>`;
+  }
+
+  function renderOpt(step) {
+    return `
+      <section class="step">
+        <span class="eyebrow">${escapeHtml(step.eyebrow)}</span>
+        <h1>${escapeHtml(step.title)}</h1>
+        <p class="subtitle">${escapeHtml(step.body)}</p>
+        <div class="comparison">
+          <div class="compare-card"><span class="eyebrow">Operating model</span><h3>What success means</h3><p>For an instructor: students understand the material and can apply it.</p></div>
+          <div class="compare-card"><span class="eyebrow">Process</span><h3>How the work repeats</h3><p>Prepare a lesson, teach it, review questions, and assess understanding.</p></div>
+          <div class="compare-card active"><span class="eyebrow">Task</span><h3>What may be automated</h3><p>Group recurring student questions and draft a review worksheet.</p></div>
+        </div>
+        <p class="body-copy">The next questions capture the operating context before narrowing toward a task.</p>
+        <a class="btn btn--secondary" href="${escapeHtml(data.optPromptUrl)}" target="_blank" rel="noopener noreferrer">Read the OPT Coach prompt ↗</a>
       </section>`;
   }
 
@@ -265,10 +281,8 @@
     return `
       <section class="step">
         <span class="eyebrow">Your answers are complete</span>
-        <h1>Unlock your personalized roadmap.</h1>
-        <p class="subtitle">Your plan is ready. Tell us where to associate it so we can send sprint updates and follow up on your application through WhatsApp.</p>
-        <p class="question-help">Applications are reviewed for ${escapeHtml(config.seatCap)} seats. ${escapeHtml(config.applicationsClose)}.</p>
-        <div class="callout"><span class="callout-icon" aria-hidden="true">✓</span><p><strong>Your answers come first.</strong><br />We only ask for contact details after you have completed the diagnostic.</p></div>
+        <h1>Send your assessment for review.</h1>
+        <p class="subtitle">Add the same name and WhatsApp number you used for the webinar. Our team will review the operating context before preparing your seven-day plan.</p>
         <form id="contactForm" class="contact-card" novalidate>
           <div class="form-grid">
             <div class="field full">
@@ -279,14 +293,10 @@
             <div class="field full">
               <label class="label" for="phone">WhatsApp number used to sign up</label>
               <div class="phone-row">
-                <select class="select" id="countryCode" name="countryCode" aria-label="Country code">
-                  <option value="+91"${state.contact.countryCode !== '+1' && state.contact.countryCode !== '+44' && state.contact.countryCode !== '+971' ? ' selected' : ''}>🇮🇳 +91</option>
-                  <option value="+1"${state.contact.countryCode === '+1' ? ' selected' : ''}>+1</option>
-                  <option value="+44"${state.contact.countryCode === '+44' ? ' selected' : ''}>+44</option>
-                  <option value="+971"${state.contact.countryCode === '+971' ? ' selected' : ''}>+971</option>
-                </select>
+                <input class="input country-code" id="countryCode" name="countryCode" type="tel" inputmode="tel" autocomplete="tel-country-code" maxlength="5" aria-label="Country calling code" value="${escapeHtml(state.contact.countryCode || '+91')}" placeholder="+91" />
                 <input class="input" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" maxlength="18" value="${escapeHtml(state.contact.phone || '')}" placeholder="98765 43210" />
               </div>
+              <p class="help">Use your international calling code, for example +91, +1, +44, or +971.</p>
               <p class="field-error" data-error-for="phone"></p>
             </div>
             <div class="field full honeypot" aria-hidden="true">
@@ -296,16 +306,16 @@
             <div class="field full">
               <label class="consent">
                 <input id="consent" name="consent" type="checkbox"${state.contact.consent ? ' checked' : ''} />
-                <span>I agree to receive my roadmap, application updates, and messages about the free 7-day Build Sprint on WhatsApp. I can opt out at any time.</span>
+                <span>I agree to receive my reviewed seven-day plan and sprint updates on WhatsApp. I can opt out at any time.</span>
               </label>
               <p class="field-error" data-error-for="consent"></p>
             </div>
             <div class="field full privacy-note">
               <span aria-hidden="true">🔒</span>
-              <span>Your responses are used to assess fit and personalize the free sprint. They are not displayed publicly.</span>
+              <span>Your answers are used for this review and are not displayed publicly.</span>
             </div>
             <div class="field full">
-              <button id="submitButton" class="btn btn--primary" type="submit">Show my 7-day roadmap →</button>
+              <button id="submitButton" class="btn btn--primary" type="submit">Submit for review →</button>
               <div id="submitStatus" class="submit-status" role="status" aria-live="polite"></div>
               <div id="submitError" class="error-summary" hidden></div>
             </div>
@@ -340,7 +350,7 @@
     if (state.contact.name.trim().length < 2) errors.name = 'Enter the name you used for the webinar.';
     const normalizedPhone = engine.normalizePhone(state.contact.countryCode, state.contact.phone);
     if (!normalizedPhone) errors.phone = 'Enter a valid WhatsApp number with country code.';
-    if (!state.contact.consent) errors.consent = 'Consent is required so we can send the roadmap on WhatsApp.';
+    if (!state.contact.consent) errors.consent = 'Consent is required so we can send the reviewed plan on WhatsApp.';
     ['name', 'phone', 'consent'].forEach((id) => contactFieldError(id, errors[id]));
     return { errors, normalizedPhone };
   }
@@ -351,7 +361,7 @@
     if (Object.keys(answerErrors).length) {
       const firstId = Object.keys(answerErrors)[0];
       const firstIndex = steps.findIndex((step) => step.id === firstId);
-      toast('One diagnostic answer needs attention.');
+      toast('One assessment answer needs attention.');
       goTo(firstIndex);
       return;
     }
@@ -364,20 +374,20 @@
     const errorBox = document.querySelector('#submitError');
     const honeypot = document.querySelector('#companyWebsite').value;
     submitButton.disabled = true;
-    submitButton.textContent = 'Building your roadmap…';
-    status.textContent = 'Scoring your starting point and mapping the next seven days.';
+    submitButton.textContent = 'Submitting…';
+    status.textContent = 'Saving your assessment for review.';
     errorBox.hidden = true;
 
-    const diagnostic = engine.scoreDiagnostic(state.answers);
-    const roadmap = engine.generateRoadmap(state.answers, diagnostic);
+    const assessment = engine.scoreAssessment(state.answers);
+    const learningPriorities = engine.rankLearningPriorities(state.answers);
     const payload = {
       webinarId: config.webinarId,
       name: state.contact.name.trim(),
       phone: normalizedPhone,
       consent: true,
       answers: state.answers,
-      clientDiagnostic: diagnostic,
-      clientRoadmap: roadmap,
+      clientAssessment: assessment,
+      clientLearningPriorities: learningPriorities,
       startedAt: new Date(state.startedAt).toISOString(),
       completedAt: new Date().toISOString(),
       elapsedSeconds: Math.max(1, Math.round((Date.now() - state.startedAt) / 1000)),
@@ -386,25 +396,25 @@
 
     try {
       let responseData = null;
-      if (config.submissionEndpoint) {
+      if (config.allowLocalDemo && ['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        responseData = { id: `local-${Date.now()}`, assessment, learningPriorities, demo: true };
+      } else if (config.submissionEndpoint) {
         const response = await fetch(config.submissionEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         responseData = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(responseData.error || 'Your application could not be submitted.');
-      } else if (config.allowLocalDemo && ['localhost', '127.0.0.1'].includes(window.location.hostname)) {
-        await new Promise((resolve) => setTimeout(resolve, 550));
-        responseData = { id: `local-${Date.now()}`, diagnostic, roadmap, demo: true };
+        if (!response.ok) throw new Error(responseData.error || 'Your assessment could not be submitted.');
       } else {
         throw new Error('Submissions are not configured yet. Please tell the host.');
       }
 
       state.submitted = true;
       state.submissionId = responseData.id;
-      state.diagnostic = responseData.diagnostic || diagnostic;
-      state.roadmap = responseData.roadmap || roadmap;
+      state.assessment = responseData.assessment || assessment;
+      state.learningPriorities = responseData.learningPriorities || learningPriorities;
       state.maxReached = steps.length - 1;
       state.pos = steps.length - 1;
       persist();
@@ -417,7 +427,7 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       submitButton.disabled = false;
-      submitButton.textContent = 'Try submission again →';
+      submitButton.textContent = 'Try again →';
       status.textContent = '';
       errorBox.textContent = error.message || 'Something went wrong. Your answers are still saved on this device.';
       errorBox.hidden = false;
@@ -425,39 +435,41 @@
   }
 
   function renderResult() {
-    const diagnostic = state.diagnostic || engine.scoreDiagnostic(state.answers);
-    const roadmap = state.roadmap || engine.generateRoadmap(state.answers, diagnostic);
-    const participant = diagnostic.participant;
+    const assessment = state.assessment || engine.scoreAssessment(state.answers);
+    const learningPriorities = state.learningPriorities || engine.rankLearningPriorities(state.answers);
+    const participant = assessment.stats;
     const scores = [
-      ['Shipping readiness', participant.shippingReadiness],
+      ['Shipping experience', participant.shippingExperience],
       ['Builder confidence', participant.builderConfidence],
-      ['Action momentum', participant.actionMomentum],
-      ['Workflow clarity', participant.workflowClarity],
-      ['Sprint readiness', participant.sprintReadiness]
+      ['Goal clarity', participant.goalClarity],
+      ['User clarity', participant.userClarity],
+      ['Process clarity', participant.processClarity],
+      ['System clarity', participant.systemClarity],
+      ['Sprint availability', participant.sprintAvailability]
     ];
-    const firstName = escapeHtml((state.contact.name || 'Builder').trim().split(/\s+/)[0]);
+    const firstName = escapeHtml((state.contact.name || '').trim().split(/\s+/)[0]);
 
     return `
       <section class="step result-step">
         <div class="result-head">
           <div>
-            <span class="result-badge">${escapeHtml(diagnostic.readinessState)}</span>
-            <h1>${firstName}, here is your route from intent to proof.</h1>
-            <p class="subtitle">This is a starting-point diagnosis, not a permanent label. Your fastest move is one narrow build tied to work you already understand.</p>
+            <span class="result-badge">${escapeHtml(assessment.readinessState)}</span>
+            <h1>${firstName ? `${firstName}, your assessment is with our team.` : 'Your assessment is with our team.'}</h1>
+            <p class="subtitle">These scores describe the detail in your current answers. They help us decide what to clarify before shaping a seven-day plan around your work.</p>
           </div>
           <button id="printButton" class="btn btn--secondary" type="button">Print / save PDF</button>
         </div>
         <div class="score-grid">
           ${scores.map(([label, score]) => `<div class="score-card"><strong>${score}/5</strong><span>${escapeHtml(label)}</span><div class="score-bar"><i style="width:${score * 20}%"></i></div></div>`).join('')}
         </div>
-        <span class="eyebrow">Your personalized build path</span>
-        <h2>Seven days. One working proof.</h2>
+        <span class="eyebrow">Learning priorities</span>
+        <h2>Topics worth understanding for your next build.</h2>
         <div class="roadmap">
-          ${roadmap.map((item) => `<article class="day-card"><div class="day-num">Day ${item.day}</div><div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.detail)}</p></div></article>`).join('')}
+          ${learningPriorities.map((item, index) => `<article class="day-card"><div class="day-num">0${index + 1}</div><div><h3>${escapeHtml(item.label)}</h3><p>${escapeHtml(item.description)}</p></div></article>`).join('')}
         </div>
         <div class="next-box">
-          <h3>Your application is in.</h3>
-          <p>We will review your answers personally. Keep this roadmap, and watch the WhatsApp number you provided for updates about the free 7-day Build Sprint.</p>
+          <h3>What happens next</h3>
+          <p>We will review your goals, users, processes, systems, and builder baseline. Your seven-day plan will be sent on WhatsApp after that review.</p>
         </div>
       </section>`;
   }
@@ -476,7 +488,7 @@
 
     backButton.style.visibility = state.pos === 0 ? 'hidden' : 'visible';
     backButton.onclick = () => goTo(state.pos - 1);
-    continueButton.textContent = state.pos === steps.length - 3 ? 'Unlock my roadmap →' : 'Continue →';
+    continueButton.textContent = state.pos === steps.length - 3 ? 'Add contact details →' : 'Continue →';
     continueButton.onclick = () => {
       if (data.questions.includes(step) && !valueIsComplete(step)) {
         const error = document.querySelector('#questionError');
@@ -504,6 +516,7 @@
 
     if (step.type === 'intro') stage.innerHTML = renderIntro(step);
     else if (step.type === 'concept') stage.innerHTML = renderConcept(step);
+    else if (step.type === 'opt') stage.innerHTML = renderOpt(step);
     else if (step.type === 'contact') stage.innerHTML = renderContact();
     else if (step.type === 'result') stage.innerHTML = renderResult();
     else stage.innerHTML = renderQuestion(step);
@@ -523,7 +536,7 @@
   });
   scrim.addEventListener('click', closeSidebar);
   document.querySelector('#resetBtn').addEventListener('click', () => {
-    if (!window.confirm('Clear your answers and restart the diagnostic?')) return;
+    if (!window.confirm('Clear your answers and restart the assessment?')) return;
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(RECEIPT_KEY);
     window.location.reload();

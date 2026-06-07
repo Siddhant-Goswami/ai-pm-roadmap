@@ -1,145 +1,86 @@
 (function (root) {
   const questions = [
     {
-      id: 'role', module: 'profile', type: 'text', title: 'What is your current role or title?',
+      id: 'role', module: 'baseline', type: 'text',
+      title: 'What is your current role?',
+      help: 'This anchors the operating model: the work you are responsible for and the decisions you own.',
       placeholder: 'e.g. Product Manager, Business Analyst, Founder', minLength: 2, maxLength: 100
     },
     {
-      id: 'path', module: 'profile', type: 'single', title: 'Which path brought you here?',
-      options: [
-        ['nontechnical', 'Analytics, data, business, or management. I have never built end-to-end.'],
-        ['technical', 'Design or engineering, then moved into product.'],
-        ['switcher', 'I am in another role and want to move into AI-native product work.'],
-        ['founder', 'Founder or solo operator.']
-      ]
-    },
-    {
-      id: 'employment', module: 'profile', type: 'single', title: 'Which best describes your current situation?',
-      options: [
-        ['employed', 'Employed full-time'],
-        ['worried', 'Employed, but actively worried about my role'],
-        ['between', 'Between roles or recently laid off'],
-        ['independent', 'Freelance, consulting, or founder']
-      ]
-    },
-    {
-      id: 'shipping', module: 'profile', type: 'single', title: 'Have you shipped something end-to-end yourself?',
-      help: 'Built and delivered it, rather than writing the spec and handing it off.',
+      id: 'shipping', module: 'baseline', type: 'single',
+      title: 'How often have you shipped something end-to-end yourself?',
+      help: 'Count working outputs you built and delivered, not specifications handed to someone else.',
       options: [
         ['never', 'Never'],
-        ['help', 'Once or twice, with a lot of help'],
-        ['few', 'A few times, but I do not think of myself as someone who builds'],
-        ['regular', 'Yes, regularly']
+        ['help', 'Once or twice, with substantial help'],
+        ['few', 'A few times'],
+        ['regular', 'Regularly']
       ]
     },
     {
-      id: 'builder_identity', module: 'identity', type: 'long',
-      title: 'Finish this sentence honestly:',
-      help: '“When it comes to building things myself, I am the kind of person who...”',
-      placeholder: 'Write the first true answer, not the impressive one.', minLength: 20, maxLength: 600
+      id: 'break_response', module: 'baseline', type: 'long',
+      title: 'When your last build or automation failed, what did you tell yourself?',
+      help: 'The response to a break often determines whether a useful experiment continues.',
+      placeholder: 'Write the sentence that appeared in your head.', minLength: 20, maxLength: 700
     },
     {
-      id: 'break_response', module: 'identity', type: 'long',
-      title: 'Think of the last time a build or automation broke. What did you tell yourself?',
-      placeholder: 'What was the sentence in your head at that moment?', minLength: 20, maxLength: 700
+      id: 'success_metrics', module: 'opt', type: 'long',
+      title: 'What goals and metrics define success in your role?',
+      help: 'Automation is only useful when it improves an outcome that already matters.',
+      placeholder: 'Name the goal, then the metric or evidence you use to judge it.', minLength: 25, maxLength: 800
     },
     {
-      id: 'attempts', module: 'momentum', type: 'multi',
-      title: 'What have you already done to close this gap?',
+      id: 'users_customers', module: 'opt', type: 'long',
+      title: 'Who are your users or customers, and what do they need from you?',
+      help: 'This keeps any automation tied to a real user need rather than a tool demonstration.',
+      placeholder: 'Describe the people, their situation, and the outcome they need.', minLength: 25, maxLength: 800
+    },
+    {
+      id: 'core_processes', module: 'opt', type: 'long',
+      title: 'What recurring processes do you run to achieve those goals?',
+      help: 'Processes reveal where repeated work, delays, and handoffs accumulate.',
+      placeholder: 'List the main workflows and briefly describe how each one runs.', minLength: 35, maxLength: 1000
+    },
+    {
+      id: 'systems_data', module: 'opt', type: 'long',
+      title: 'Which tools, systems, and data sources are involved?',
+      help: 'The surrounding systems determine what an automation can read, change, and return.',
+      placeholder: 'e.g. Jira, Notion, Slack, CRM, support tickets, research notes', minLength: 15, maxLength: 700
+    },
+    {
+      id: 'commitment', module: 'availability', type: 'single',
+      title: 'Can you protect one focused hour a day for seven days?',
+      help: 'A useful plan must fit the time you can actually commit.',
       options: [
-        ['tutorials', 'Watched tutorials or YouTube'],
-        ['course', 'Started an online course'],
-        ['paid', 'Invested money in learning or hands-on support'],
-        ['built', 'Tried to build something on my own'],
-        ['nothing', 'Nothing yet. This is my first real step.']
+        ['yes', 'Yes, every day'],
+        ['mostly', 'Most days; I may miss one or two'],
+        ['unsure', 'Not reliably this week']
       ]
-    },
-    {
-      id: 'prior_effort', module: 'momentum', type: 'long',
-      title: 'What happened when you tried?',
-      help: 'If this is your first step, tell us what finally made you start now.',
-      placeholder: 'What did you spend time on, and where did it stall?', minLength: 15, maxLength: 700
-    },
-    {
-      id: 'workflow', module: 'workflow', type: 'long',
-      title: 'Name one repetitive work task you wish would disappear.',
-      placeholder: 'Describe what comes in, what you do repeatedly, and what should come out.', minLength: 25, maxLength: 800
-    },
-    {
-      id: 'tools', module: 'workflow', type: 'multi', other: true,
-      title: 'Which tools do you live in day to day?',
-      options: [
-        ['notion', 'Notion'], ['jira', 'Jira or Linear'], ['sheets', 'Excel or Google Sheets'],
-        ['slack', 'Slack or Teams'], ['email', 'Email'], ['figma', 'Figma'],
-        ['analytics', 'Amplitude or Mixpanel'], ['crm', 'CRM']
-      ]
-    },
-    {
-      id: 'desired_build', module: 'workflow', type: 'long',
-      title: 'What working thing would you want to show in your next 1:1?',
-      placeholder: 'One concrete outcome your lead could see or use.', minLength: 20, maxLength: 700
-    },
-    {
-      id: 'focus_time', module: 'commitment', type: 'single',
-      title: 'When is one focused hour most likely to happen?',
-      options: [
-        ['morning', 'Early morning'], ['lunch', 'Lunch'], ['evening', 'Evening'],
-        ['late', 'Late night'], ['weekend', 'Weekends only']
-      ]
-    },
-    {
-      id: 'commitment', module: 'commitment', type: 'single',
-      title: 'Can you commit one hour a day for seven days?',
-      options: [
-        ['yes', 'Yes, fully'],
-        ['mostly', 'Mostly. I may miss one or two days.'],
-        ['unsure', 'Honestly unsure']
-      ]
-    },
-    {
-      id: 'why_now', module: 'commitment', type: 'long',
-      title: 'Why this, and why now?',
-      placeholder: 'What changes if you act now? What happens if you do not?', minLength: 25, maxLength: 800
-    },
-    {
-      id: 'seat_case', module: 'commitment', type: 'long',
-      title: 'Why should one of the limited sprint seats be yours?',
-      help: 'Two specific lines are stronger than a motivational paragraph.',
-      placeholder: 'Make the case in your own words.', minLength: 30, maxLength: 500
     }
   ];
 
   root.ROADMAP_DATA = {
+    optPromptUrl: 'https://github.com/Siddhant-Goswami/100x-LLM/blob/main/prompts/OPT_COACH.md',
     modules: [
-      { id: 'shift', title: 'The shift', number: '01' },
-      { id: 'profile', title: 'Your starting point', number: '02' },
-      { id: 'identity', title: 'What happens at the break', number: '03' },
-      { id: 'momentum', title: 'What you have tried', number: '04' },
-      { id: 'workflow', title: 'Your build opportunity', number: '05' },
-      { id: 'commitment', title: 'The next seven days', number: '06' },
-      { id: 'contact', title: 'Unlock your roadmap', number: '07' },
-      { id: 'result', title: 'Your roadmap', number: '08' }
+      { id: 'context', title: 'Context', number: '01' },
+      { id: 'baseline', title: 'Builder baseline', number: '02' },
+      { id: 'opt', title: 'OPT assessment', number: '03' },
+      { id: 'availability', title: 'Availability', number: '04' },
+      { id: 'contact', title: 'Contact details', number: '05' },
+      { id: 'result', title: 'Assessment summary', number: '06' }
     ],
     introSteps: [
       {
-        id: 'welcome', module: 'shift', type: 'intro',
-        title: 'The PM role is shifting. Find your place in it.',
-        subtitle: 'This is not a test of how many AI tools you know. It is a diagnostic of whether you can turn a messy product problem into something working.',
-        body: 'Answer the questions as you are today. At the end, you will get a practical seven-day build path based on your work, tools, and current confidence.'
+        id: 'welcome', module: 'context', type: 'intro',
+        title: 'Find the work where applied AI can create measurable leverage.',
+        subtitle: 'This assessment looks at your operating context, how you respond when a build fails, and where automation could improve work that already matters.',
+        body: 'Your answers will be reviewed by our team. We will use them to design a focused seven-day plan and send it to the WhatsApp number you provide.'
       },
       {
-        id: 'false_exits', module: 'shift', type: 'concept',
-        eyebrow: 'The three false exits',
-        title: 'More code, more prompts, or more waiting will not make you a shipper.',
-        body: 'Learning can help, but collecting tutorials is not the same as completing a build. AI-native product work begins when you can take one real workflow from problem to working v1.',
-        variant: 'exits'
-      },
-      {
-        id: 'reframe', module: 'shift', type: 'concept',
-        eyebrow: 'The useful reframe',
-        title: 'An AI-Native PM is not defined by code. They ship end-to-end.',
-        body: 'The old operating mode ends at a document and a handoff. The new one brings a working first version to the conversation. The distance between those modes is smaller than it looks.',
-        variant: 'comparison'
+        id: 'opt_explainer', module: 'context', type: 'opt',
+        eyebrow: 'Operating model → Process → Task',
+        title: 'Start with the work. Narrow down to the task.',
+        body: 'Your operating model defines success. Processes are the recurring ways you deliver it. Tasks are the discrete actions inside those processes that may be suitable for automation.'
       }
     ],
     questions

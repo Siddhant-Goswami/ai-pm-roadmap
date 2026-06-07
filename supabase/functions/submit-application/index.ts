@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const productionOrigin = 'https://ai-pm-roadmap-delta.vercel.app';
 const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN') || productionOrigin;
+const assessmentVersion = 'opt-v1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': allowedOrigin,
@@ -9,20 +10,37 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
+const requiredAnswerIds = [
+  'role', 'shipping', 'break_response', 'success_metrics',
+  'users_customers', 'core_processes', 'systems_data', 'commitment'
+];
+
 const selfDoubtTerms = [
   'not technical', 'not cut out', 'not built', 'not smart', 'i cannot', "i can't",
   'imposter', 'gave up', 'quit', 'stupid', 'bad at', 'not capable', 'failed'
 ];
 
-const actionTerms = [
-  'built', 'tried', 'course', 'tutorial', 'prototype', 'automation', 'project',
-  'spent', 'paid', 'hours', 'week', 'youtube', 'learned'
-];
-
-const requiredAnswerIds = [
-  'role', 'path', 'employment', 'shipping', 'builder_identity',
-  'break_response', 'attempts', 'prior_effort', 'workflow', 'tools',
-  'desired_build', 'focus_time', 'commitment', 'why_now', 'seat_case'
+const topicRules = [
+  {
+    id: 'rag', label: 'RAG',
+    description: 'Ground model responses in the documents and knowledge your work depends on.',
+    terms: ['document', 'knowledge', 'research', 'notes', 'policy', 'content', 'search', 'notion', 'drive', 'wiki']
+  },
+  {
+    id: 'llm-as-judge', label: 'LLM-as-judge',
+    description: 'Use models to review, classify, compare, or score outputs against explicit criteria.',
+    terms: ['review', 'classif', 'score', 'quality', 'priorit', 'triage', 'assess', 'rank', 'evaluate']
+  },
+  {
+    id: 'guardrails', label: 'Guardrails',
+    description: 'Set boundaries for sensitive, customer-facing, or consequential model behavior.',
+    terms: ['customer', 'user', 'support', 'sensitive', 'private', 'compliance', 'decision', 'approval', 'risk']
+  },
+  {
+    id: 'observability', label: 'Observability',
+    description: 'Trace multi-step AI workflows so failures, latency, and cost are visible.',
+    terms: ['integration', 'api', 'workflow', 'handoff', 'system', 'automation', 'slack', 'jira', 'crm', 'pipeline']
+  }
 ];
 
 function json(body: unknown, status = 200) {
@@ -41,10 +59,6 @@ function includesAny(value: unknown, terms: string[]) {
   return terms.some((term) => normalized.includes(term));
 }
 
-function list(value: unknown): string[] {
-  return Array.isArray(value) ? value.map((item) => cleanText(item, 100)).filter(Boolean) : [];
-}
-
 function validPhone(value: unknown) {
   const phone = cleanText(value, 20);
   return /^\+[1-9]\d{9,14}$/.test(phone) ? phone : null;
@@ -58,110 +72,76 @@ function validIsoDate(value: unknown) {
 }
 
 function hasRequiredAnswers(answers: Record<string, unknown>) {
-  return requiredAnswerIds.every((id) => {
-    const value = answers[id];
-    return Array.isArray(value) ? value.length > 0 : cleanText(value).length > 0;
-  });
+  return requiredAnswerIds.every((id) => cleanText(answers[id]).length > 0);
 }
 
-function scoreDiagnostic(answers: Record<string, unknown>) {
-  let profileFit = 0;
-  if (answers.path === 'nontechnical' || answers.path === 'switcher') profileFit += 1;
-  if (answers.employment === 'employed' || answers.employment === 'worried') profileFit += 1;
-  if (answers.shipping === 'never' || answers.shipping === 'help') profileFit += 1;
-
-  const identityText = [answers.builder_identity, answers.break_response].map((value) => cleanText(value)).join(' ');
-  let identitySignal = 0;
-  if (includesAny(answers.break_response, selfDoubtTerms)) identitySignal += 2;
-  else if (cleanText(answers.break_response).length >= 60) identitySignal += 1;
-  if (identityText.length >= 160) identitySignal += 1;
-  identitySignal = Math.min(3, identitySignal);
-
-  const attempts = list(answers.attempts);
-  let intent = 0;
-  if (attempts.some((item) => ['tutorials', 'course', 'paid', 'built'].includes(item))) intent += 1;
-  if (includesAny(answers.prior_effort, actionTerms) && cleanText(answers.prior_effort).length >= 50) intent += 1;
-  if (answers.commitment === 'yes' && cleanText(answers.why_now).length >= 50 && cleanText(answers.seat_case).length >= 45) intent += 1;
-
-  const personalizationClarity =
-    cleanText(answers.workflow).length >= 45 && cleanText(answers.desired_build).length >= 35 ? 1 : 0;
-
-  const reviewFlags: string[] = [];
-  if (answers.shipping === 'regular') reviewFlags.push('already-ships-regularly');
-  if (answers.commitment === 'unsure') reviewFlags.push('commitment-uncertain');
-  if (cleanText(answers.seat_case).length < 45) reviewFlags.push('low-detail-seat-case');
-  if (answers.commitment === 'unsure' && cleanText(answers.seat_case).length < 45) reviewFlags.push('manual-review-priority');
-
-  const participantScores = {
-    shippingReadiness: answers.shipping === 'regular' ? 5 : answers.shipping === 'few' ? 4 : answers.shipping === 'help' ? 2 : 1,
-    builderConfidence: includesAny(identityText, selfDoubtTerms) ? 1 : identityText.length >= 160 ? 3 : 2,
-    actionMomentum: Math.min(5, Math.max(1, attempts.filter((item) => item !== 'nothing').length + (includesAny(answers.prior_effort, actionTerms) ? 1 : 0))),
-    workflowClarity: personalizationClarity ? 5 : cleanText(answers.workflow).length >= 25 ? 3 : 1,
-    sprintReadiness: answers.commitment === 'yes' ? 5 : answers.commitment === 'mostly' ? 3 : 1
-  };
-
-  let readinessState = 'Starting Line';
-  if (participantScores.shippingReadiness >= 4) readinessState = 'Active Builder';
-  else if (participantScores.actionMomentum >= 3 && participantScores.builderConfidence <= 2) readinessState = 'Stalled Experimenter';
-  else if (participantScores.actionMomentum >= 3 || participantScores.workflowClarity >= 4) readinessState = 'Emerging Shipper';
-
-  return {
-    internal: {
-      profileFit,
-      identitySignal,
-      intent,
-      personalizationClarity,
-      total: profileFit + identitySignal + intent + personalizationClarity,
-      flags: reviewFlags
-    },
-    participant: participantScores,
-    readinessState
-  };
+function detailScore(value: unknown, thresholds: [number, number, number]) {
+  const length = cleanText(value).length;
+  if (length >= thresholds[2]) return 5;
+  if (length >= thresholds[1]) return 4;
+  if (length >= thresholds[0]) return 3;
+  return length ? 2 : 1;
 }
 
-function toolLabel(answers: Record<string, unknown>) {
-  const labels: Record<string, string> = {
-    notion: 'Notion', jira: 'Jira or Linear', sheets: 'Sheets',
-    slack: 'Slack or Teams', email: 'email', figma: 'Figma',
-    analytics: 'your analytics tool', crm: 'your CRM'
+function scoreAssessment(answers: Record<string, unknown>) {
+  const breakResponse = cleanText(answers.break_response);
+  const stats = {
+    shippingExperience: answers.shipping === 'regular' ? 5 : answers.shipping === 'few' ? 4 : answers.shipping === 'help' ? 2 : 1,
+    builderConfidence: includesAny(breakResponse, selfDoubtTerms) ? 1 : breakResponse.length >= 100 ? 4 : 3,
+    goalClarity: detailScore(answers.success_metrics, [45, 90, 160]),
+    userClarity: detailScore(answers.users_customers, [45, 90, 160]),
+    processClarity: detailScore(answers.core_processes, [70, 140, 240]),
+    systemClarity: detailScore(answers.systems_data, [35, 75, 140]),
+    sprintAvailability: answers.commitment === 'yes' ? 5 : answers.commitment === 'mostly' ? 3 : 1
   };
-  const tools = list(answers.tools).map((tool) => labels[tool]).filter(Boolean);
-  const other = cleanText(answers.tools_other, 100);
-  if (other) tools.push(other);
-  return tools.slice(0, 2).join(' and ') || 'the tools you already use';
+
+  const flags: string[] = [];
+  if (answers.shipping === 'regular') flags.push('already-ships-regularly');
+  if (answers.commitment === 'unsure') flags.push('availability-uncertain');
+  if (stats.processClarity <= 2) flags.push('process-detail-low');
+  if (stats.goalClarity <= 2) flags.push('success-metric-detail-low');
+
+  const values = Object.values(stats);
+  const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+  let readinessState = 'Foundation';
+  if (average >= 4) readinessState = 'Ready to scope';
+  else if (average >= 3) readinessState = 'Promising starting point';
+
+  return { stats, readinessState, flags };
 }
 
-function generateRoadmap(answers: Record<string, unknown>, diagnostic: ReturnType<typeof scoreDiagnostic>) {
-  const workflow = cleanText(answers.workflow, 800) || 'your repetitive workflow';
-  const desiredBuild = cleanText(answers.desired_build, 700) || 'a useful working prototype';
-  const tools = toolLabel(answers);
-  const focusSlots: Record<string, string> = {
-    morning: 'early-morning hour', lunch: 'lunch-hour block', evening: 'evening block',
-    late: 'late-night block', weekend: 'weekend focus block'
-  };
-  const focusSlot = focusSlots[cleanText(answers.focus_time)] || 'focused hour';
-  const supportNote = diagnostic.participant.builderConfidence <= 2
-    ? 'Write down every break as a system observation, not a verdict on your ability.'
-    : 'Record the decisions you make so the build becomes repeatable.';
+function rankLearningPriorities(answers: Record<string, unknown>) {
+  const context = [
+    answers.success_metrics, answers.users_customers,
+    answers.core_processes, answers.systems_data
+  ].map((value) => cleanText(value)).join(' ').toLowerCase();
 
   return [
-    { day: 1, title: 'Map the job, not the feature', detail: `Turn "${workflow}" into a simple before-and-after workflow. Define one measurable sign that it improved.` },
-    { day: 2, title: 'Make the inputs real', detail: `Collect three representative examples from ${tools}. Mark the minimum input your v1 needs and the exact output it should create.` },
-    { day: 3, title: 'Build the narrow happy path', detail: `Create the smallest version that produces "${desiredBuild}" for one clean example. Ignore integrations and polish.` },
-    { day: 4, title: 'Connect your actual workflow', detail: `Move one real input through the prototype using ${tools}. Keep manual copy-paste steps if they help you finish.` },
-    { day: 5, title: 'Design for the break', detail: `Test missing, messy, and ambiguous inputs. Add one recovery path. ${supportNote}` },
-    { day: 6, title: 'Run it on real work', detail: 'Use the build on a task you genuinely need to complete. Measure time saved, corrections needed, and where trust drops.' },
-    { day: 7, title: 'Package the proof', detail: `Use your ${focusSlot} to prepare a three-minute demo: the old workflow, the working build, the evidence, and the next improvement.` }
-  ];
+    {
+      id: 'ai-system-design', label: 'AI system design',
+      description: 'Break an AI product into models, data, tools, state, and human decision points.',
+      score: 6
+    },
+    {
+      id: 'evals', label: 'Evals',
+      description: 'Define measurable checks for quality before an AI workflow reaches real users.',
+      score: 5
+    },
+    ...topicRules.map((topic) => ({
+      ...topic,
+      score: topic.terms.reduce((score, term) => score + (context.includes(term) ? 2 : 0), 0)
+    }))
+  ]
+    .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label))
+    .slice(0, 3)
+    .map(({ id, label, description }) => ({ id, label, description }));
 }
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
   const requestOrigin = request.headers.get('origin');
-  if (requestOrigin && requestOrigin !== allowedOrigin) {
-    return json({ error: 'Origin not allowed.' }, 403);
-  }
+  if (requestOrigin && requestOrigin !== allowedOrigin) return json({ error: 'Origin not allowed.' }, 403);
 
   let payload: Record<string, unknown>;
   try {
@@ -175,7 +155,7 @@ Deno.serve(async (request) => {
   if (cleanText(payload.website)) return json({ error: 'Submission rejected.' }, 400);
   const elapsedSeconds = Number(payload.elapsedSeconds);
   if (!Number.isFinite(elapsedSeconds) || elapsedSeconds < 20) {
-    return json({ error: 'Please take enough time to complete the diagnostic.' }, 400);
+    return json({ error: 'Please take enough time to complete the assessment.' }, 400);
   }
 
   const webinarId = cleanText(payload.webinarId, 120);
@@ -187,11 +167,11 @@ Deno.serve(async (request) => {
     : {};
 
   if (!webinarId || name.length < 2 || !phone || !consent || !hasRequiredAnswers(answers)) {
-    return json({ error: 'Required application fields are missing or invalid.' }, 400);
+    return json({ error: 'Required assessment fields are missing or invalid.' }, 400);
   }
 
-  const diagnostic = scoreDiagnostic(answers);
-  const roadmap = generateRoadmap(answers, diagnostic);
+  const assessment = scoreAssessment(answers);
+  const learningPriorities = rankLearningPriorities(answers);
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!supabaseUrl || !serviceRoleKey) return json({ error: 'Submission service is not configured.' }, 503);
@@ -205,15 +185,18 @@ Deno.serve(async (request) => {
     phone_e164: phone,
     whatsapp_consent: consent,
     answers,
-    readiness_state: diagnostic.readinessState,
-    participant_scores: diagnostic.participant,
-    profile_fit: diagnostic.internal.profileFit,
-    identity_signal: diagnostic.internal.identitySignal,
-    intent_score: diagnostic.internal.intent,
-    personalization_clarity: diagnostic.internal.personalizationClarity,
-    total_score: diagnostic.internal.total,
-    review_flags: diagnostic.internal.flags,
-    roadmap,
+    readiness_state: assessment.readinessState,
+    participant_scores: assessment.stats,
+    assessment_version: assessmentVersion,
+    assessment_stats: assessment.stats,
+    learning_priorities: learningPriorities,
+    profile_fit: null,
+    identity_signal: null,
+    intent_score: null,
+    personalization_clarity: null,
+    total_score: null,
+    review_flags: assessment.flags,
+    roadmap: null,
     elapsed_seconds: elapsedSeconds,
     started_at: validIsoDate(payload.startedAt),
     submitted_at: new Date().toISOString(),
@@ -227,9 +210,9 @@ Deno.serve(async (request) => {
     .single();
 
   if (error) {
-    console.error('application insert failed', error);
-    return json({ error: 'Your application could not be saved. Please retry.' }, 500);
+    console.error('assessment insert failed', error);
+    return json({ error: 'Your assessment could not be saved. Please retry.' }, 500);
   }
 
-  return json({ id: data.id, diagnostic, roadmap });
+  return json({ id: data.id, assessment, learningPriorities });
 });

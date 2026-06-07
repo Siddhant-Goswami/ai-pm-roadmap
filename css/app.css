@@ -38,7 +38,7 @@ body{overflow-x:hidden}
 .callout-icon{width:32px;height:32px;display:grid;place-items:center;background:var(--accent);border-radius:9px;flex:0 0 auto;font-weight:700}
 .callout p{margin:0;color:var(--fg-2)}
 .callout strong{color:var(--fg)}
-.comparison{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:28px}
+.comparison{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:28px}
 .compare-card{border:1px solid var(--border);border-radius:var(--r-lg);padding:22px}
 .compare-card.active{border-color:var(--accent);background:var(--accent-tint)}
 .compare-card h3{font-family:var(--font-display);margin:0 0 10px}
