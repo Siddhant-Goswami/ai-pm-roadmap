@@ -31,6 +31,13 @@ test('generic conversion copy is absent', () => {
   assert.doesNotMatch(sources, /Unlock your roadmap|Applications close soon|Show my 7-day roadmap/i);
 });
 
+test('assessment questions do not enforce minimum response lengths', () => {
+  const sources = ['js/data.js', 'js/engine.js', 'js/app.js']
+    .map((path) => fs.readFileSync(path, 'utf8'))
+    .join('\n');
+  assert.doesNotMatch(sources, /minLength|Add a little more detail|at least \d+ characters/);
+});
+
 test('the Edge Function recomputes assessment and upserts the unique webinar phone', () => {
   const source = fs.readFileSync('supabase/functions/submit-application/index.ts', 'utf8');
   assert.match(source, /const assessment = scoreAssessment\(answers\)/);

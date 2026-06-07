@@ -101,8 +101,7 @@
     const value = state.answers[question.id];
     if (question.type === 'multi') return Array.isArray(value) && value.length > 0;
     const normalized = String(value || '').trim();
-    if (!normalized) return false;
-    return !question.minLength || normalized.length >= question.minLength;
+    return Boolean(normalized);
   }
 
   function renderNavigation() {
@@ -492,9 +491,7 @@
     continueButton.onclick = () => {
       if (data.questions.includes(step) && !valueIsComplete(step)) {
         const error = document.querySelector('#questionError');
-        error.textContent = step.minLength
-          ? `Add a little more detail (at least ${step.minLength} characters).`
-          : 'Answer this question to continue.';
+        error.textContent = 'Answer this question to continue.';
         return;
       }
       unlockNext();

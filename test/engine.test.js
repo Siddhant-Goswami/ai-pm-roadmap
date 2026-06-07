@@ -54,7 +54,16 @@ test('custom international calling codes normalize to E.164', () => {
   assert.equal(engine.normalizePhone('+12345', '5551234567'), null);
 });
 
-test('minimum-detail validation catches incomplete OPT answers', () => {
-  const errors = engine.validateAnswers(answers({ core_processes: 'Too short' }), questions);
-  assert.match(errors.core_processes, /at least 35/);
+test('short answers are accepted while blank answers are rejected', () => {
+  assert.deepEqual(engine.validateAnswers(answers({
+    role: 'PM',
+    break_response: 'Stopped',
+    success_metrics: 'Retention',
+    users_customers: 'PMs',
+    core_processes: 'Research',
+    systems_data: 'Slack'
+  }), questions), {});
+
+  const errors = engine.validateAnswers(answers({ core_processes: '   ' }), questions);
+  assert.equal(errors.core_processes, 'Answer this question to continue.');
 });

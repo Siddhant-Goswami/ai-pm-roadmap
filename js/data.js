@@ -4,7 +4,7 @@
       id: 'role', module: 'baseline', type: 'text',
       title: 'What is your current role?',
       help: 'This anchors the operating model: the work you are responsible for and the decisions you own.',
-      placeholder: 'e.g. Product Manager, Business Analyst, Founder', minLength: 2, maxLength: 100
+      placeholder: 'e.g. Product Manager, Business Analyst, Founder', maxLength: 100
     },
     {
       id: 'shipping', module: 'baseline', type: 'single',
@@ -21,31 +21,31 @@
       id: 'break_response', module: 'baseline', type: 'long',
       title: 'When your last build or automation failed, what did you tell yourself?',
       help: 'The response to a break often determines whether a useful experiment continues.',
-      placeholder: 'Write the sentence that appeared in your head.', minLength: 20, maxLength: 700
+      placeholder: 'Write the sentence that appeared in your head.', maxLength: 700
     },
     {
       id: 'success_metrics', module: 'opt', type: 'long',
       title: 'What goals and metrics define success in your role?',
       help: 'Automation is only useful when it improves an outcome that already matters.',
-      placeholder: 'Name the goal, then the metric or evidence you use to judge it.', minLength: 25, maxLength: 800
+      placeholder: 'Name the goal, then the metric or evidence you use to judge it.', maxLength: 800
     },
     {
       id: 'users_customers', module: 'opt', type: 'long',
       title: 'Who are your users or customers, and what do they need from you?',
       help: 'This keeps any automation tied to a real user need rather than a tool demonstration.',
-      placeholder: 'Describe the people, their situation, and the outcome they need.', minLength: 25, maxLength: 800
+      placeholder: 'Describe the people, their situation, and the outcome they need.', maxLength: 800
     },
     {
       id: 'core_processes', module: 'opt', type: 'long',
       title: 'What recurring processes do you run to achieve those goals?',
       help: 'Processes reveal where repeated work, delays, and handoffs accumulate.',
-      placeholder: 'List the main workflows and briefly describe how each one runs.', minLength: 35, maxLength: 1000
+      placeholder: 'List the main workflows and briefly describe how each one runs.', maxLength: 1000
     },
     {
       id: 'systems_data', module: 'opt', type: 'long',
       title: 'Which tools, systems, and data sources are involved?',
       help: 'The surrounding systems determine what an automation can read, change, and return.',
-      placeholder: 'e.g. Jira, Notion, Slack, CRM, support tickets, research notes', minLength: 15, maxLength: 700
+      placeholder: 'e.g. Jira, Notion, Slack, CRM, support tickets, research notes', maxLength: 700
     },
     {
       id: 'commitment', module: 'availability', type: 'single',

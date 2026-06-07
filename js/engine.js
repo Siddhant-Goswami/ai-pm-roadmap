@@ -123,10 +123,6 @@
       const value = answers[question.id];
       if (!text(value)) {
         errors[question.id] = 'Answer this question to continue.';
-        return;
-      }
-      if (question.minLength && text(value).length < question.minLength) {
-        errors[question.id] = `Add a little more detail (at least ${question.minLength} characters).`;
       }
     });
     return errors;
