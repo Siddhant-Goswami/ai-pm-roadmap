@@ -6,7 +6,7 @@
     seatCap: 15,
     applicationsClose: 'Applications close soon',
     sprintStarts: 'Dates shared with selected applicants',
-    submissionEndpoint: '',
+    submissionEndpoint: 'https://bapgzlmgeudrcqikbttf.supabase.co/functions/v1/submit-application',
     allowLocalDemo: true
   };
 })(typeof window !== 'undefined' ? window : globalThis);

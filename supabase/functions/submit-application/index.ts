@@ -1,7 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+const productionOrigin = 'https://ai-pm-roadmap-delta.vercel.app';
+const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN') || productionOrigin;
+
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') || '*',
+  'Access-Control-Allow-Origin': allowedOrigin,
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
@@ -155,9 +158,8 @@ function generateRoadmap(answers: Record<string, unknown>, diagnostic: ReturnTyp
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
-  const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN');
   const requestOrigin = request.headers.get('origin');
-  if (allowedOrigin && requestOrigin && requestOrigin !== allowedOrigin) {
+  if (requestOrigin && requestOrigin !== allowedOrigin) {
     return json({ error: 'Origin not allowed.' }, 403);
   }
 
